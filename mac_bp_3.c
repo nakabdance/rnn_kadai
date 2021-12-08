@@ -16,7 +16,7 @@
 #define NUM_OUTPUT 1			// 出力素子数。
 #define EPSILON 0.1	 		// 学習時の重み修正の程度を決める。
 #define THRESHOLD_ERROR 0.01	// 学習誤差がこの値以下になるとプログラムは停止する。
-#define BETA 0.8				// 非線形性の強さ
+#define BETA 0.5				// 非線形性の強さ
 
 int tx[NUM_SAMPLE][NUM_INPUT], ty[NUM_SAMPLE][NUM_OUTPUT];			// 訓練データを格納する配列。tx = 入力値：ty = 教師信号
 double x[NUM_INPUT+NUM_CON+1], h[NUM_HIDDEN+1], c[NUM_CON], y[NUM_OUTPUT];// 閾値表現用に１つ余分に確保。
@@ -46,6 +46,7 @@ void next_state(void);
 double genrand_real1(void);
 double genrand_real2(void);
 double genrand_real3(void);
+unsigned long genrand_real4(void);
 
 void ReadData(void);
 void InitNet(void);
@@ -82,7 +83,7 @@ int main(int argc, char *argv[])
 	// 学習の繰り返しループ。
 	for(ilearn=0; ilearn<NUM_LEARN; ilearn++)
 	{
-		if((ilearn % 1000) == 0)
+		if((ilearn % 5000) == 0)
 		{
 			printf("# of learning : %d\n", ilearn);
 		}
@@ -136,11 +137,11 @@ void ReadData(void)
 		tx[isample][i] = 0;
         if((isample % 3) == 0)
         {
-         	tx[isample][i] = rand() % 2;
+         	tx[isample][i] = genrand_real4() % 2;
     	}
     	else if((isample % 3) == 1)
     	{
-         	tx[isample][i] = rand() % 2;
+         	tx[isample][i] = genrand_real4() % 2;
     	}
     	else
     	{
@@ -191,7 +192,7 @@ void InitNet(void)
 {
 	int i, j;
 	
-	for(i=0; i<NUM_INPUT+1; i++)
+	for(i=0; i<NUM_INPUT+NUM_CON+1; i++)
 	{
 		for (j=0; j<NUM_HIDDEN; j++)
 		{
@@ -234,7 +235,7 @@ void Feedforward(int isample2)
 	for(j=0; j<NUM_HIDDEN; j++)
 	{
 		net_input = 0;
-		for(i=0; i<NUM_INPUT+NUM_CON; i++)
+		for(i=0; i<NUM_INPUT+NUM_CON+1; i++)
 		{
 			net_input = net_input + w1[i][j] * x[i];
 		}
@@ -242,10 +243,8 @@ void Feedforward(int isample2)
 		h[j] = (double)(1.0 / (1.0 + exp((double)net_input * -BETA)));
 
 		// 文脈ニューロン素子値[名嘉]
-		if(j>0)
-		{
 		c[j] = h[j];
-		}
+
 	}
 	h[NUM_HIDDEN] = (double)1.0;
 
@@ -292,7 +291,7 @@ void ModifyWaits(void)
 	int i, j;
 	double epsilon = (double)EPSILON;
 	
-	for(i=0; i<NUM_INPUT+NUM_CON+1; i++)
+	for(i=0; i<NUM_INPUT+NUM_CON+1; i++)	//
 	{
 		for(j=0; j<NUM_HIDDEN; j++)
 		{
@@ -312,12 +311,12 @@ void ModifyWaits(void)
 void PrintResults(int isample2, double error2)
 {
 	int i;
-	
 	printf("   training data NO. = %d\n", isample2+1);
 	printf("      IN: ");
 	for(i=0; i<NUM_INPUT; i++)
 	{
 		printf("%.0lf ", x[i]);
+
 	}
 	
 	printf("   Trained_OUT: ");
@@ -474,3 +473,20 @@ double genrand_real3(void)
     /* divided by 2^32 */
 }
 
+/* ランダムな実数値を返す関数 */
+unsigned long genrand_real4(void)
+{
+    unsigned long y;
+
+    if (--left == 0) next_state();
+    y = *next++;
+
+    /* Tempering */
+    y ^= (y >> 11);
+    y ^= (y << 7) & 0x9d2c5680UL;
+    y ^= (y << 15) & 0xefc60000UL;
+    y ^= (y >> 18);
+
+    return (y); 
+    /* divided by 2^32 */
+}
